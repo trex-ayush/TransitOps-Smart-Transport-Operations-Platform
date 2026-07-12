@@ -4,7 +4,6 @@ dns.setServers(["1.1.1.1", "8.8.8.8"]);
 require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
-const mongoose = require("mongoose");
 
 const app = express();
 
@@ -26,10 +25,4 @@ app.use("/api/expenses", require("./routes/expenseRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB error:", err.message));
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+module.exports = app;

@@ -1,0 +1,70 @@
+name: Deploy Backend (Lambda + Infra)
+
+# Deploys the whole SAM stack (Lambda, HTTP API, S3, CloudFront).
+# Runs on backend or infrastructure changes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "template.yaml"
+      - ".github/workflows/backend-deploy.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
+env:
+  STACK_NAME: transitops
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: SAM build
+        run: sam build
+
+      - name: SAM deploy
+        run: |
+          sam deploy \
+            --stack-name "$STACK_NAME" \
+            --region "$AWS_REGION" \
+            --capabilities CAPABILITY_IAM \
+            --resolve-s3 \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              MongoUri="${{ secrets.MONGO_URI }}" \
+              JwtSecret="${{ secrets.JWT_SECRET }}" \
+              ClientUrl="${{ secrets.CLIENT_URL }}" \
+              SmtpHost="${{ secrets.SMTP_HOST }}" \
+              SmtpPort="${{ secrets.SMTP_PORT }}" \
+              SmtpUser="${{ secrets.SMTP_USER }}" \
+              SmtpPass="${{ secrets.SMTP_PASS }}" \
+              SmtpFrom="${{ secrets.SMTP_FROM }}"
+
+      - name: Show stack outputs
+        run: |
+          aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --region "$AWS_REGION" \
+            --query "Stacks[0].Outputs" \
+            --output table

@@ -17,6 +17,10 @@ npm-debug.log*
 dist/
 build/
 
+# aws sam
+.aws-sam/
+samconfig.toml
+
 # os / editor
 .DS_Store
 Thumbs.db

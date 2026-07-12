@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  TransitOps - Smart Transport Operations Platform.
+  Backend on Lambda + API Gateway (HTTP API); frontend on S3 fronted by
+  CloudFront. CloudFront routes /api/* to the API so the SPA and API share
+  one origin (no CORS, cookies "just work").
+
+Parameters:
+  MongoUri:
+    Type: String
+    NoEcho: true
+    Description: MongoDB connection string (e.g. a MongoDB Atlas SRV URI).
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: Secret used to sign JWTs.
+  ClientUrl:
+    Type: String
+    Default: ""
+    Description: >
+      Public site URL used in outgoing emails (e.g. https://xxxx.cloudfront.net
+      or your custom domain). Leave blank on the first deploy, then set it to
+      the CloudFrontURL output and redeploy.
+  SmtpHost:
+    Type: String
+    Default: ""
+  SmtpPort:
+    Type: String
+    Default: "587"
+  SmtpUser:
+    Type: String
+    Default: ""
+  SmtpPass:
+    Type: String
+    NoEcho: true
+    Default: ""
+  SmtpFrom:
+    Type: String
+    Default: ""
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs22.x
+
+Resources:
+  # ---------------------------------------------------------------------------
+  # Backend: Lambda (Express via serverless-http) + HTTP API
+  # ---------------------------------------------------------------------------
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-api"
+      CodeUri: backend/
+      Handler: lambda.handler
+      Environment:
+        Variables:
+          NODE_ENV: production
+          MONGO_URI: !Ref MongoUri
+          JWT_SECRET: !Ref JwtSecret
+          CLIENT_URL: !Ref ClientUrl
+          SMTP_HOST: !Ref SmtpHost
+          SMTP_PORT: !Ref SmtpPort
+          SMTP_USER: !Ref SmtpUser
+          SMTP_PASS: !Ref SmtpPass
+          SMTP_FROM: !Ref SmtpFrom
+      Events:
+        # Catch-all: every method/path goes to Express, which does its own routing.
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      # Default stage ($default) is served without a stage prefix in the path.
+      StageName: $default
+
+  # ---------------------------------------------------------------------------
+  # Frontend: private S3 bucket, reachable only through CloudFront (OAC)
+  # ---------------------------------------------------------------------------
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-frontend-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${FrontendBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution.Id}"
+
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "${AWS::StackName} distribution"
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+          - Id: ApiOrigin
+            DomainName: !Sub "${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          # Managed-CachingOptimized
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: ApiOrigin
+            ViewerProtocolPolicy: https-only
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            # Managed-CachingDisabled
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            # Managed-AllViewerExceptHostHeader (forwards cookies, query, headers; not Host)
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+        CustomErrorResponses:
+          # SPA fallback: let React Router handle unknown paths.
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+Outputs:
+  ApiUrl:
+    Description: Direct HTTP API endpoint (bypasses CloudFront; useful for debugging).
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  CloudFrontURL:
+    Description: Public site URL (serves the SPA and proxies /api/*).
+    Value: !Sub "https://${CloudFrontDistribution.DomainName}"
+  DistributionId:
+    Description: CloudFront distribution ID (for cache invalidations).
+    Value: !Ref CloudFrontDistribution
+  FrontendBucketName:
+    Description: S3 bucket that holds the built frontend.
+    Value: !Ref FrontendBucket
