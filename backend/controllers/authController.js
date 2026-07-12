@@ -146,26 +146,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-const mailDebug = async (req, res) => {
-  const p = process.env.SMTP_PASS || "";
-  const passInfo = { len: p.length, hasSpaces: /\s/.test(p), preview: p.length > 4 ? `${p.slice(0, 2)}***${p.slice(-2)}` : "short" };
-  try {
-    const info = await sendEmail({
-      to: process.env.SMTP_USER || "test@example.com",
-      subject: "TransitOps Lambda SMTP test",
-      text: "SMTP test from Lambda",
-      html: "<p>SMTP test from Lambda</p>",
-    });
-    res.json({
-      smtpUser: process.env.SMTP_USER || null,
-      smtpHost: process.env.SMTP_HOST || null,
-      smtpPort: process.env.SMTP_PORT || null,
-      pass: passInfo,
-      result: info?.skipped ? "SKIPPED (SMTP env not configured)" : { messageId: info?.messageId || null, accepted: info?.accepted || null },
-    });
-  } catch (err) {
-    res.json({ smtpUser: process.env.SMTP_USER || null, smtpHost: process.env.SMTP_HOST || null, pass: passInfo, error: err.message, code: err.code });
-  }
-};
-
-module.exports = { register, setupStatus, login, me, logout, forgotPassword, resetPassword, updateProfile, changePassword, mailDebug };
+module.exports = { register, setupStatus, login, me, logout, forgotPassword, resetPassword, updateProfile, changePassword };
