@@ -117,4 +117,33 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { register, setupStatus, login, me, logout, forgotPassword, resetPassword };
+const updateProfile = async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ message: "Name is required" });
+    const user = await User.findByIdAndUpdate(req.user._id, { name: name.trim() }, { new: true, runValidators: true });
+    res.json({ user: sendUser(user) });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ message: "Current and new password are required" });
+    if (newPassword.length < 6) return res.status(400).json({ message: "New password must be at least 6 characters" });
+
+    const user = await User.findById(req.user._id).select("+password");
+    if (!(await user.comparePassword(currentPassword))) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+    user.password = newPassword;
+    await user.save();
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+module.exports = { register, setupStatus, login, me, logout, forgotPassword, resetPassword, updateProfile, changePassword };
