@@ -3,6 +3,8 @@ import { useAuth } from "./context/AuthContext";
 import { can } from "./config/permissions";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Fleet from "./pages/Fleet";
 import Drivers from "./pages/Drivers";
@@ -31,6 +33,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         element={
           <Protected>
