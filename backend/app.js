@@ -23,6 +23,7 @@ app.use("/api/trips", require("./routes/tripRoutes"));
 app.use("/api/maintenance", require("./routes/maintenanceRoutes"));
 app.use("/api/fuel", require("./routes/fuelRoutes"));
 app.use("/api/expenses", require("./routes/expenseRoutes"));
+app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 
 mongoose
   .connect(process.env.MONGO_URI)
