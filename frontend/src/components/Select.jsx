@@ -1,7 +1,7 @@
 import { Info } from "lucide-react";
 import Tooltip from "./Tooltip";
 
-export default function Input({ label, hint, error, className = "", ...props }) {
+export default function Select({ label, hint, error, options = [], placeholder, className = "", ...props }) {
   return (
     <label className="block">
       {label && (
@@ -14,12 +14,19 @@ export default function Input({ label, hint, error, className = "", ...props }) 
           )}
         </span>
       )}
-      <input
-        className={`w-full rounded-full border bg-card px-4 py-2.5 text-sm text-forest transition-colors placeholder:text-forest/40 focus:outline-none ${
+      <select
+        className={`w-full rounded-full border bg-card px-4 py-2.5 text-sm text-forest transition-colors focus:outline-none ${
           error ? "border-rose-300 focus:border-rose-400" : "border-transparent focus:border-sage"
         } ${className}`}
         {...props}
-      />
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
       {error && <span className="mt-1 block px-1 text-xs text-rose-600">{error}</span>}
     </label>
   );
