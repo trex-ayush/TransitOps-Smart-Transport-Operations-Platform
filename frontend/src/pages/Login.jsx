@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getSetupStatus } from "../api/users";
 import Button from "../components/Button";
@@ -85,6 +85,12 @@ export default function Login() {
           <Button type="submit" disabled={busy} className="mt-8 w-full">
             {busy ? "Please wait..." : setupNeeded ? "Create Admin Account" : "Sign In"}
           </Button>
+
+          {!setupNeeded && (
+            <p className="mt-4 text-center text-sm">
+              <Link to="/forgot-password" className="text-sage transition-colors hover:text-terracotta">Forgot password?</Link>
+            </p>
+          )}
         </form>
       </div>
     </div>
