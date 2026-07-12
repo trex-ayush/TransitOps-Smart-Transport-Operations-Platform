@@ -21,6 +21,8 @@ app.use("/api/vehicles", require("./routes/vehicleRoutes"));
 app.use("/api/drivers", require("./routes/driverRoutes"));
 app.use("/api/trips", require("./routes/tripRoutes"));
 app.use("/api/maintenance", require("./routes/maintenanceRoutes"));
+app.use("/api/fuel", require("./routes/fuelRoutes"));
+app.use("/api/expenses", require("./routes/expenseRoutes"));
 
 mongoose
   .connect(process.env.MONGO_URI)
