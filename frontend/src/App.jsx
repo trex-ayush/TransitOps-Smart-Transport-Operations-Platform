@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
+import { can } from "./config/permissions";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -18,6 +19,14 @@ function Protected({ children }) {
   return user ? children : <Navigate to="/login" replace />;
 }
 
+function RoleGuard({ module, children }) {
+  const { user } = useAuth();
+  if (!user) return null;
+  return can(user.role, module) ? children : <Navigate to="/dashboard" replace />;
+}
+
+const guarded = (module, element) => <RoleGuard module={module}>{element}</RoleGuard>;
+
 export default function App() {
   return (
     <Routes>
@@ -31,14 +40,14 @@ export default function App() {
       >
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/fleet" element={<Fleet />} />
-        <Route path="/drivers" element={<Drivers />} />
-        <Route path="/trips" element={<Trips />} />
-        <Route path="/maintenance" element={<Maintenance />} />
-        <Route path="/expenses" element={<Expenses />} />
-        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/fleet" element={guarded("fleet", <Fleet />)} />
+        <Route path="/drivers" element={guarded("drivers", <Drivers />)} />
+        <Route path="/trips" element={guarded("trips", <Trips />)} />
+        <Route path="/maintenance" element={guarded("maintenance", <Maintenance />)} />
+        <Route path="/expenses" element={guarded("expenses", <Expenses />)} />
+        <Route path="/analytics" element={guarded("analytics", <Analytics />)} />
+        <Route path="/users" element={guarded("users", <Users />)} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/users" element={<Users />} />
       </Route>
     </Routes>
   );

@@ -1,24 +1,28 @@
 import { useEffect, useState } from "react";
-import { Check, Eye, Minus } from "lucide-react";
+import { Check, Minus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import Select from "../components/Select";
 import { getSettings, updateSettings } from "../api/settings";
+import { PERMISSIONS } from "../config/permissions";
 
-const modules = ["Fleet", "Drivers", "Trips", "Fuel/Exp", "Analytics"];
-const rbac = [
-  { role: "Fleet Manager", access: ["full", "full", "none", "none", "full"] },
-  { role: "Dispatcher", access: ["view", "none", "full", "none", "none"] },
-  { role: "Safety Officer", access: ["none", "full", "view", "none", "none"] },
-  { role: "Financial Analyst", access: ["view", "none", "none", "full", "full"] },
+const matrixModules = [
+  { key: "fleet", label: "Fleet" },
+  { key: "drivers", label: "Drivers" },
+  { key: "trips", label: "Trips" },
+  { key: "maintenance", label: "Maint." },
+  { key: "expenses", label: "Fuel/Exp" },
+  { key: "analytics", label: "Analytics" },
 ];
+const roles = Object.keys(PERMISSIONS);
 
-const AccessCell = ({ level }) => {
-  if (level === "full") return <Check size={16} strokeWidth={2} className="mx-auto text-emerald-600" />;
-  if (level === "view") return <Eye size={15} strokeWidth={1.5} className="mx-auto text-sky-500" />;
-  return <Minus size={15} strokeWidth={1.5} className="mx-auto text-forest/30" />;
-};
+const AccessCell = ({ allowed }) =>
+  allowed ? (
+    <Check size={16} strokeWidth={2} className="mx-auto text-emerald-600" />
+  ) : (
+    <Minus size={15} strokeWidth={1.5} className="mx-auto text-forest/30" />
+  );
 
 export default function Settings() {
   const { user } = useAuth();
@@ -79,18 +83,18 @@ export default function Settings() {
               <thead>
                 <tr className="border-b border-stone">
                   <th className="py-3 pr-4 text-[11px] font-medium uppercase tracking-widest text-forest/50">Role</th>
-                  {modules.map((m) => (
-                    <th key={m} className="px-2 py-3 text-center text-[11px] font-medium uppercase tracking-widest text-forest/50">{m}</th>
+                  {matrixModules.map((m) => (
+                    <th key={m.key} className="px-2 py-3 text-center text-[11px] font-medium uppercase tracking-widest text-forest/50">{m.label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {rbac.map((row) => (
-                  <tr key={row.role} className="border-b border-stone/60 last:border-0">
-                    <td className="py-3 pr-4 text-forest/80">{row.role}</td>
-                    {row.access.map((level, i) => (
-                      <td key={i} className="px-2 py-3 text-center">
-                        <AccessCell level={level} />
+                {roles.map((role) => (
+                  <tr key={role} className="border-b border-stone/60 last:border-0">
+                    <td className="py-3 pr-4 text-forest/80">{role}</td>
+                    {matrixModules.map((m) => (
+                      <td key={m.key} className="px-2 py-3 text-center">
+                        <AccessCell allowed={PERMISSIONS[role].includes(m.key)} />
                       </td>
                     ))}
                   </tr>
@@ -99,8 +103,7 @@ export default function Settings() {
             </table>
           </div>
           <p className="mt-4 text-xs text-forest/40">
-            <Check size={12} className="inline text-emerald-600" /> Full ·{" "}
-            <Eye size={12} className="inline text-sky-500" /> View only ·{" "}
+            <Check size={12} className="inline text-emerald-600" /> Access ·{" "}
             <Minus size={12} className="inline text-forest/30" /> No access
           </p>
         </div>

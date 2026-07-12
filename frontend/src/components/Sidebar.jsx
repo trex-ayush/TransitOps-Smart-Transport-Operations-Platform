@@ -1,24 +1,23 @@
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Truck, Users, Route, Wrench, Receipt, BarChart3, Settings, UserCog } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { can } from "../config/permissions";
 
-const baseLinks = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/fleet", label: "Fleet", icon: Truck },
-  { to: "/drivers", label: "Drivers", icon: Users },
-  { to: "/trips", label: "Trips", icon: Route },
-  { to: "/maintenance", label: "Maintenance", icon: Wrench },
-  { to: "/expenses", label: "Fuel & Expenses", icon: Receipt },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/settings", label: "Settings", icon: Settings },
+const allLinks = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, module: "dashboard" },
+  { to: "/fleet", label: "Fleet", icon: Truck, module: "fleet" },
+  { to: "/drivers", label: "Drivers", icon: Users, module: "drivers" },
+  { to: "/trips", label: "Trips", icon: Route, module: "trips" },
+  { to: "/maintenance", label: "Maintenance", icon: Wrench, module: "maintenance" },
+  { to: "/expenses", label: "Fuel & Expenses", icon: Receipt, module: "expenses" },
+  { to: "/analytics", label: "Analytics", icon: BarChart3, module: "analytics" },
+  { to: "/users", label: "Users", icon: UserCog, module: "users" },
+  { to: "/settings", label: "Settings", icon: Settings, module: "settings" },
 ];
 
 export default function Sidebar() {
   const { user } = useAuth();
-  const links = [...baseLinks];
-  if (user?.role === "Fleet Manager") {
-    links.splice(7, 0, { to: "/users", label: "Users", icon: UserCog });
-  }
+  const links = allLinks.filter((l) => can(user?.role, l.module));
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-stone bg-white/70 px-5 py-8 backdrop-blur-sm">
