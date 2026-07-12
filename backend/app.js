@@ -25,5 +25,6 @@ app.use("/api/expenses", require("./routes/expenseRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/reports", require("./routes/reportRoutes"));
+app.use("/api/settings", require("./routes/settingsRoutes"));
 
 module.exports = app;
