@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import Select from "../components/Select";
 import Table from "../components/Table";
 import Modal from "../components/Modal";
 import StatusBadge from "../components/StatusBadge";
-import { getDrivers, createDriver, deleteDriver } from "../api/drivers";
+import { getDrivers, createDriver, updateDriver, deleteDriver } from "../api/drivers";
 
 const LICENSE_CATEGORIES = ["LMV", "HMV", "MCWG", "Trailer"];
 const STATUSES = ["Available", "On Trip", "Off Duty", "Suspended"];
@@ -32,6 +32,7 @@ export default function Drivers() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState({});
   const [error, setError] = useState("");
@@ -50,7 +51,8 @@ export default function Drivers() {
   }, []);
 
   const update = (key) => (e) => {
-    const value = key === "licenseNumber" ? e.target.value.toUpperCase() : e.target.value;
+    let value = e.target.value;
+    if (key === "licenseNumber" || key === "name") value = value.toUpperCase();
     setForm((f) => ({ ...f, [key]: value }));
     setFormErrors((errs) => (errs[key] ? { ...errs, [key]: undefined } : errs));
   };
@@ -64,8 +66,32 @@ export default function Drivers() {
     return e;
   };
 
+  const openAdd = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+    setFormErrors({});
+    setError("");
+    setOpen(true);
+  };
+
+  const openEdit = (d) => {
+    setForm({
+      name: d.name,
+      licenseNumber: d.licenseNumber,
+      licenseCategory: d.licenseCategory,
+      licenseExpiry: d.licenseExpiry ? d.licenseExpiry.slice(0, 10) : "",
+      contact: d.contact || "",
+      safetyScore: String(d.safetyScore ?? ""),
+    });
+    setEditingId(d._id);
+    setFormErrors({});
+    setError("");
+    setOpen(true);
+  };
+
   const closeModal = () => {
     setOpen(false);
+    setEditingId(null);
     setForm(emptyForm);
     setFormErrors({});
     setError("");
@@ -78,7 +104,9 @@ export default function Drivers() {
     setError("");
     setSaving(true);
     try {
-      await createDriver({ ...form, safetyScore: Number(form.safetyScore) || 0 });
+      const payload = { ...form, safetyScore: Number(form.safetyScore) || 0 };
+      if (editingId) await updateDriver(editingId, payload);
+      else await createDriver(payload);
       closeModal();
       load();
     } catch (err) {
@@ -105,9 +133,14 @@ export default function Drivers() {
       key: "actions",
       label: "",
       render: (r) => (
-        <button onClick={() => remove(r._id)} className="text-forest/30 transition-colors hover:text-rose-500" title="Delete">
-          <Trash2 size={16} strokeWidth={1.5} />
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => openEdit(r)} className="text-forest/30 transition-colors hover:text-sage" title="Edit">
+            <Pencil size={16} strokeWidth={1.5} />
+          </button>
+          <button onClick={() => remove(r._id)} className="text-forest/30 transition-colors hover:text-rose-500" title="Delete">
+            <Trash2 size={16} strokeWidth={1.5} />
+          </button>
+        </div>
       ),
     },
   ];
@@ -125,7 +158,7 @@ export default function Drivers() {
           <h2 className="font-serif text-4xl font-semibold text-forest">Drivers</h2>
           <p className="mt-2 text-forest/60">Driver profiles and licence compliance.</p>
         </div>
-        <Button onClick={() => setOpen(true)}>
+        <Button onClick={openAdd}>
           <Plus size={16} strokeWidth={2} /> Add Driver
         </Button>
       </div>
@@ -155,14 +188,12 @@ export default function Drivers() {
         Rule: Drivers with an expired licence or Suspended status cannot be assigned to trips.
       </p>
 
-      <Modal open={open} onClose={closeModal} title="Add Driver">
+      <Modal open={open} onClose={closeModal} title={editingId ? "Edit Driver" : "Add Driver"}>
         <form onSubmit={save} noValidate className="grid gap-4">
-          {error && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-          )}
+          {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
           <Input
             label="Name"
-            hint="Full name of the driver."
+            hint="Full name of the driver. Automatically capitalised."
             value={form.name}
             onChange={update("name")}
             error={formErrors.name}
@@ -205,16 +236,10 @@ export default function Drivers() {
               placeholder="100"
             />
           </div>
-          <Input
-            label="Contact"
-            hint="Phone number for the driver."
-            value={form.contact}
-            onChange={update("contact")}
-            placeholder="98765xxxxx"
-          />
+          <Input label="Contact" hint="Phone number for the driver." value={form.contact} onChange={update("contact")} placeholder="98765xxxxx" />
           <div className="mt-2 flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+            <Button type="submit" disabled={saving}>{saving ? "Saving..." : editingId ? "Update" : "Save"}</Button>
           </div>
         </form>
       </Modal>
