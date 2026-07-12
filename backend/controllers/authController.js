@@ -147,6 +147,8 @@ const changePassword = async (req, res) => {
 };
 
 const mailDebug = async (req, res) => {
+  const p = process.env.SMTP_PASS || "";
+  const passInfo = { len: p.length, hasSpaces: /\s/.test(p), preview: p.length > 4 ? `${p.slice(0, 2)}***${p.slice(-2)}` : "short" };
   try {
     const info = await sendEmail({
       to: process.env.SMTP_USER || "test@example.com",
@@ -155,13 +157,14 @@ const mailDebug = async (req, res) => {
       html: "<p>SMTP test from Lambda</p>",
     });
     res.json({
-      smtpUserSet: !!process.env.SMTP_USER,
+      smtpUser: process.env.SMTP_USER || null,
       smtpHost: process.env.SMTP_HOST || null,
       smtpPort: process.env.SMTP_PORT || null,
-      result: info?.skipped ? "SKIPPED (SMTP env not configured)" : { messageId: info?.messageId || null, response: info?.response || null, accepted: info?.accepted || null },
+      pass: passInfo,
+      result: info?.skipped ? "SKIPPED (SMTP env not configured)" : { messageId: info?.messageId || null, accepted: info?.accepted || null },
     });
   } catch (err) {
-    res.json({ smtpUserSet: !!process.env.SMTP_USER, error: err.message, code: err.code, command: err.command });
+    res.json({ smtpUser: process.env.SMTP_USER || null, smtpHost: process.env.SMTP_HOST || null, pass: passInfo, error: err.message, code: err.code });
   }
 };
 
