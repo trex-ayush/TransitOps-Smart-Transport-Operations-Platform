@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const User = require("../models/User");
+const { sendEmail } = require("../utils/mailer");
 
 const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
@@ -62,4 +64,57 @@ const logout = (req, res) => {
   res.json({ message: "Logged out" });
 };
 
-module.exports = { register, setupStatus, login, me, logout };
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      user.resetPasswordToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+      user.resetPasswordExpires = Date.now() + 30 * 60 * 1000;
+      await user.save();
+
+      const resetUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/reset-password?token=${rawToken}`;
+      try {
+        await sendEmail({
+          to: email,
+          subject: "Reset your TransitOps password",
+          text: `Reset your password using this link (valid 30 minutes): ${resetUrl}`,
+          html: `<p>You requested a password reset for <b>TransitOps</b>.</p>
+            <p><a href="${resetUrl}">Reset your password</a> — this link is valid for 30 minutes.</p>
+            <p>If you didn't request this, you can safely ignore this email.</p>`,
+        });
+      } catch (mailErr) {
+        console.error("Failed to send reset email:", mailErr.message);
+      }
+    }
+    res.json({ message: "If that email is registered, a reset link has been sent." });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ message: "Token and new password are required" });
+    if (password.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+
+    const hashed = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      resetPasswordToken: hashed,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+    if (!user) return res.status(400).json({ message: "Reset link is invalid or has expired" });
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    res.json({ message: "Password reset successful. You can now log in." });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { register, setupStatus, login, me, logout, forgotPassword, resetPassword };
