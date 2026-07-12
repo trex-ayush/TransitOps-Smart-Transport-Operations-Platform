@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# env
+.env
+**/.env
+
+Notes/
+Image/
+
+# logs
+*.log
+npm-debug.log*
+
+# build
+dist/
+build/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
