@@ -1,3 +1,7 @@
+const dns = require("node:dns");
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
+
+require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
@@ -12,19 +16,12 @@ app.get("/", (req, res) => {
   res.json({ message: "TransitOps API is running" });
 });
 
+app.use("/api/auth", require("./routes/authRoutes"));
+
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB error:", err.message));
+
 const PORT = process.env.PORT || 5000;
-
-const start = async () => {
-  try {
-    if (process.env.MONGO_URI) {
-      await mongoose.connect(process.env.MONGO_URI);
-      console.log("MongoDB connected");
-    }
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  } catch (err) {
-    console.error(err.message);
-    process.exit(1);
-  }
-};
-
-start();
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
