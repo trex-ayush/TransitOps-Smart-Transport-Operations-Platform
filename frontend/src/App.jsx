@@ -14,6 +14,7 @@ import Expenses from "./pages/Expenses";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Users from "./pages/Users";
+import Profile from "./pages/Profile";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/analytics" element={guarded("analytics", <Analytics />)} />
         <Route path="/users" element={guarded("users", <Users />)} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
     </Routes>
   );

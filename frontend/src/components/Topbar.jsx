@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Search, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -24,10 +25,12 @@ export default function Topbar() {
         <span className="rounded-full border border-sage px-3 py-1 text-[11px] uppercase tracking-widest text-sage">
           {user?.role}
         </span>
-        <span className="text-sm font-medium text-forest">{user?.name}</span>
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-forest text-sm font-medium text-white">
-          {initials(user?.name)}
-        </div>
+        <Link to="/profile" className="flex items-center gap-3 transition-opacity hover:opacity-80">
+          <span className="text-sm font-medium text-forest">{user?.name}</span>
+          <div className="grid h-9 w-9 place-items-center rounded-full bg-forest text-sm font-medium text-white">
+            {initials(user?.name)}
+          </div>
+        </Link>
         <button onClick={logout} className="text-forest/40 transition-colors hover:text-terracotta" title="Log out">
           <LogOut size={18} strokeWidth={1.5} />
         </button>
