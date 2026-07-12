@@ -6,7 +6,7 @@ import Input from "../components/Input";
 import Select from "../components/Select";
 import Table from "../components/Table";
 import Modal from "../components/Modal";
-import { getUsers, createUser, deleteUser } from "../api/users";
+import { getUsers, createUser, updateUser, deleteUser } from "../api/users";
 
 const ROLES = ["Fleet Manager", "Dispatcher", "Safety Officer", "Financial Analyst"];
 const emptyForm = { name: "", email: "", role: "", password: "" };
@@ -87,10 +87,38 @@ export default function Users() {
     }
   };
 
+  const changeRole = async (id, role) => {
+    setError("");
+    setUsers((list) => list.map((u) => (u.id === id ? { ...u, role } : u)));
+    try {
+      await updateUser(id, { role });
+      setNotice("Role updated.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update role");
+      load();
+    }
+  };
+
   const columns = [
     { key: "name", label: "Name" },
     { key: "email", label: "Email" },
-    { key: "role", label: "Role" },
+    {
+      key: "role",
+      label: "Role",
+      render: (r) => (
+        <select
+          value={r.role}
+          onChange={(e) => changeRole(r.id, e.target.value)}
+          className="rounded-full border border-transparent bg-card px-3 py-1.5 text-sm text-forest transition-colors hover:border-stone focus:border-sage focus:outline-none"
+        >
+          {ROLES.map((role) => (
+            <option key={role} value={role}>
+              {role}
+            </option>
+          ))}
+        </select>
+      ),
+    },
     {
       key: "active",
       label: "Status",
